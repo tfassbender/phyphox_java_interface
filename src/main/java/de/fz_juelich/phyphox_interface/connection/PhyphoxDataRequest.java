@@ -17,7 +17,28 @@ public class PhyphoxDataRequest {
 	}
 	
 	public String getAsString() {
-		//TODO
-		return null;
+		if (buffers.size() != offsets.size()) {
+			throw new IllegalStateException("The number of buffers and the number of offsets have to be equal");
+		}
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < buffers.size(); i++) {
+			sb.append(buffers.get(i));
+			sb.append("=");
+			sb.append(offsets.get(i));
+			sb.append("&");
+		}
+		sb.setLength(sb.length() - 1);
+		return sb.toString();
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof PhyphoxDataRequest) {
+			PhyphoxDataRequest request = (PhyphoxDataRequest) obj;
+			return request.getAsString().equals(this.getAsString());
+		}
+		else {
+			return super.equals(obj);
+		}
 	}
 }
