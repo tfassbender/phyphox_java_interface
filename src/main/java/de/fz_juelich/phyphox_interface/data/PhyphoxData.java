@@ -2,7 +2,7 @@ package de.fz_juelich.phyphox_interface.data;
 
 import java.util.List;
 
-import de.fz_juelich.phyphox_interface.connection.PhyphoxDataReceiver;
+import de.fz_juelich.phyphox_interface.connection.PhyphoxDataCollector;
 
 /**
  * The main class to be used.<br>
@@ -11,12 +11,12 @@ import de.fz_juelich.phyphox_interface.connection.PhyphoxDataReceiver;
  */
 public class PhyphoxData<T> {
 	
-	private PhyphoxDataReceiver receiver;//the connection to the phone (parses JSON, ...)
+	private PhyphoxDataCollector receiver;//the connection to the phone (parses JSON, ...)
 	private List<List<T>> data;//all the data from the phone buffers
 	private int buffers;//the number of buffers that are used (locally)
 	private List<PhyphoxDataTransformer<T>> transformers;//transform the raw data into usable values (usually double)
 	private double updateRate;//the update rate to request new data from the phone (in Hz)
-	private List<Integer> lastRead;//the last indices of data that were read from the user
+	private int[] lastRead;//the last indices of data that were read from the user
 	
 	public List<List<T>> getAllData() {
 		//TODO
@@ -33,7 +33,7 @@ public class PhyphoxData<T> {
 		return null;
 	}
 	
-	public List<T> getNewData(int buffer) {
+	public List<T> getNewBufferData(int buffer) {
 		//TODO
 		return null;
 	}
