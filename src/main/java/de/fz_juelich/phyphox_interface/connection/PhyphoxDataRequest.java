@@ -12,14 +12,15 @@ public class PhyphoxDataRequest {
 	private List<String> offsets;
 	
 	public PhyphoxDataRequest(List<String> buffers, List<String> offsets) {
+		if (buffers.size() != offsets.size()) {
+			throw new IllegalArgumentException("The number of buffers and the number of offsets have to be equal.");
+		}
 		this.buffers = buffers;
 		this.offsets = offsets;
+		replaceNullWithFull(offsets);
 	}
 	
 	public String getAsString() {
-		if (buffers.size() != offsets.size()) {
-			throw new IllegalStateException("The number of buffers and the number of offsets have to be equal");
-		}
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < buffers.size(); i++) {
 			sb.append(buffers.get(i));
@@ -39,6 +40,17 @@ public class PhyphoxDataRequest {
 		}
 		else {
 			return super.equals(obj);
+		}
+	}
+	
+	/**
+	 * Replace all null values with the text "full" for full updates.
+	 */
+	private void replaceNullWithFull(List<String> offsets) {
+		for (int i = 0; i < offsets.size(); i++) {
+			if (offsets.get(i) == null) {
+				offsets.set(i, "full");
+			}
 		}
 	}
 }

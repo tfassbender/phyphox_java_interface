@@ -1,6 +1,6 @@
 package de.fz_juelich.phyphox_interface.data;
 
-public class PhyphoxBuffer {
+public class PhyphoxBuffer implements Cloneable {
 	
 	private String name;
 	private double[] data;
@@ -11,8 +11,10 @@ public class PhyphoxBuffer {
 	}
 	private PhyphoxBuffer(PhyphoxBuffer copy, int startIndex) {
 		this.name = copy.name;
-		this.data = new double[copy.data.length - startIndex];
-		System.arraycopy(copy.data, startIndex, data, 0, data.length);
+		this.data = new double[Math.max(copy.data.length - startIndex, 0)];
+		if (copy.size() - startIndex > 0) {
+			System.arraycopy(copy.data, startIndex, data, 0, data.length);			
+		}
 	}
 	
 	public String getName() {
@@ -39,9 +41,24 @@ public class PhyphoxBuffer {
 	}
 	
 	/**
+	 * Get the size of this buffer (the number of elements in the buffers array).
+	 */
+	public int size() {
+		return data.length;
+	}
+	
+	/**
 	 * Get a (sub-) copy of this buffer with the data starting from the given start index.
 	 */
 	public PhyphoxBuffer getCopyFromIndex(int startIndex) {
 		return new PhyphoxBuffer(this, startIndex);
+	}
+	
+	/**
+	 * Clone this buffer using a deep copy (the value array is copied by value, not by reference).
+	 */
+	@Override
+	public PhyphoxBuffer clone() {
+		return new PhyphoxBuffer(this, 0);
 	}
 }

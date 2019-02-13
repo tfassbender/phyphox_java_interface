@@ -20,7 +20,7 @@ class PhyphoxBufferTest {
 	}
 	
 	@Test
-	public void testClone() {
+	public void testSubClone() {
 		double[] data = new double[] {1, 2, 3, 4, 5};
 		
 		PhyphoxBuffer buffer = new PhyphoxBuffer("buffer1", data);
@@ -29,5 +29,17 @@ class PhyphoxBufferTest {
 		final double epsilon = 1e-5;
 		assertEquals(3, subBuffer.getData().length);
 		assertArrayEquals(new double[] {3, 4, 5}, subBuffer.getData(), epsilon);
+	}
+
+	@Test
+	public void testClone() {
+		double[] data = new double[] {1, 2, 3, 4, 5};
+		
+		PhyphoxBuffer buffer = new PhyphoxBuffer("buffer1", data);
+		PhyphoxBuffer clone = buffer.clone();
+		
+		final double epsilon = 1e-5;
+		assertEquals(5, clone.getData().length);
+		assertArrayEquals(new double[] {1, 2, 3, 4, 5}, clone.getData(), epsilon);
 	}
 }

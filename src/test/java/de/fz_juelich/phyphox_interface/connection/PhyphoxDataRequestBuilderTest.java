@@ -34,4 +34,28 @@ class PhyphoxDataRequestBuilderTest {
 		
 		assertEquals("x=42.0&y=42.0|x", request.getAsString());
 	}
+	
+	@Test
+	public void testSetBufferOffset_wrongOrder() {
+		PhyphoxDataRequestBuilder builder = new PhyphoxDataRequestBuilder();
+		builder.setOffsetToBuffer(1, 0, 42);//set the buffer offset before the buffers are set
+		builder.setBuffer(1, "y").setBuffer(0, "x").setOffset(0, 42);
+		
+		PhyphoxDataRequest request = builder.build();
+		
+		assertEquals("x=42.0&y=42.0|x", request.getAsString());
+	}
+	
+	@Test
+	public void testSetBufferOffset_doubleSet() {
+		PhyphoxDataRequestBuilder builder = new PhyphoxDataRequestBuilder();
+		builder.setBuffer(1, "y").setBuffer(0, "x").setBuffer(2, "time").setOffset(2, 42);
+		builder.setOffsetToBuffer(1, 0, 42);
+		builder.setOffsetToBuffer(1, 2, 42);//only the second bufferOffset counts
+		
+		PhyphoxDataRequest request = builder.build();
+		
+		//x is full updated because it's unset
+		assertEquals("x=full&y=42.0|time&time=42.0", request.getAsString());
+	}
 }
