@@ -135,7 +135,7 @@ public class PhyphoxData {
 						Thread.currentThread().interrupt();
 					}
 					catch (PhyphoxConnectionException e) {
-						throw new RuntimeException("A problem occured while trying to read the data from the experiment.", e);
+						//throw new RuntimeException("A problem occured while trying to read the data from the experiment.", e);
 					}
 				}
 			}

@@ -65,10 +65,10 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 			//a connection object with an IP and a port
 			PhyphoxConnection connection = new PhyphoxConnection(ip, port);
 			//the buffer names (can include the continues buffer but doesn't need to)
-			List<String> bufferNames = Arrays.asList(new String[] {textFieldNameBuffer1.getText()});
+			List<String> bufferNames = Arrays.asList(new String[] {textFieldNameBuffer1.getText(), textFieldTimeBuffer.getText()});
 			//a continues buffer like the time (optional; null if no one exists)
 			String continuesBufferName = textFieldTimeBuffer.getText();
-			//update data from the experiment once a second
+			//update data from the experiment every second
 			int updateRate = 1000;
 			
 			//initialize the textArea and the chart before starting the data update
@@ -76,7 +76,7 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 			initializeChart();
 			
 			//create the PhyphoxData object that starts reading the buffers automatically
-			experimentData = new PhyphoxData(connection, bufferNames, continuesBufferName, updateRate);
+			experimentData = new PhyphoxData(connection, bufferNames, null, updateRate);//TODO
 			//register this object as PhyphoxDataListener to be informed about new data
 			experimentData.addDataListener(this);
 			
@@ -113,59 +113,75 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 	
 	@Override
 	public void updateData(List<PhyphoxBuffer> newData, boolean fullUpdate) {
+		//print the data for testing:
+		//printData(newData);
+		
 		if (fullUpdate) {
 			//would be the case if there would be no continues buffer (like the time buffer)
 			//the data would not be appended at the end but fully updated...
 			
-			//here only some printing is implemented for test reasons
-			for (PhyphoxBuffer buffer : newData) {
-				System.out.println("\n" + buffer.getName());
-				double[] data = buffer.getData();
-				for (int i = 0; i < data.length; i++) {
-					System.out.println(i + " " + data[i]);
-				}
-			}
+			List<XYChart.Data<String, Double>> chartDataPoints = getAsChartData(newData);
+			
+			//set the chart data series (needs to be run in an JavaFX thread; therefore the Platform.runLater())
+			Platform.runLater(() -> {
+				chartOutputData.getData().clear();
+				XYChart.Series<String, Double> series = new XYChart.Series<String, Double>();
+				series.getData().addAll(chartDataPoints);
+				chartOutputData.getData().add(series);
+			});
 		}
 		else {
-			//should be the case in this example because there is a continues buffer (the time buffer)
+			//should be the case when there is a continues buffer (e.g. the time buffer)
+			List<XYChart.Data<String, Double>> chartDataPoints = getAsChartData(newData);
 			
-			//just add the new data at the end
-			if (newData.size() == 2) {//should be x-values and time
-				//we can use index 0 here because it was the first name that was added 
-				PhyphoxBuffer xDataBuffer = newData.get(0);
-				
-				//alternatively just check the names of the buffers
-				String timeBufferName = textFieldTimeBuffer.getText();
-				Optional<PhyphoxBuffer> timeBufferOptional = PhyphoxBuffer.getByName(newData, timeBufferName);
-				PhyphoxBuffer timeBuffer;
-				//get the buffer if there was any with the searched name
-				if (timeBufferOptional.isPresent()) {
-					timeBuffer = timeBufferOptional.get();
-				}
-				else {
-					//if there is no such buffer something went wrong and should probably be logged or something...
-					return;
-				}
-				
-				//TODO print only for testing
-				for (PhyphoxBuffer buffer : newData) {
-					System.out.println("\n" + buffer.getName());
-					double[] data = buffer.getData();
-					for (int i = 0; i < data.length; i++) {
-						System.out.println(i + " " + data[i]);
-					}
-				}
-				
-				//append the data to the text area and the chart
-				List<XYChart.Data<String, Double>> chartDataPoints = new ArrayList<XYChart.Data<String, Double>>();
-				for (int i = 0; i < newData.get(0).size(); i++) {
-					double time = timeBuffer.getData()[i];
-					double xData = xDataBuffer.getData()[i];
-					textAreaOutputPlainText.appendText(String.format("\n%.3f              %.5f", time, xData));
-					chartDataPoints.add(new XYChart.Data<String, Double>(String.format("%.4f", time), xData));
-				}
-				//append at the end of the chart data series (needs to be run in an JavaFX thread; therefore the Platform.runLater())
-				Platform.runLater(() -> chartOutputData.getData().get(0).getData().addAll(chartDataPoints));
+			//append at the end of the chart data series (needs to be run in an JavaFX thread; therefore the Platform.runLater())
+			Platform.runLater(() -> chartOutputData.getData().get(0).getData().addAll(chartDataPoints));
+		}
+	}
+	
+	private List<XYChart.Data<String, Double>> getAsChartData(List<PhyphoxBuffer> newData) {
+		if (newData.size() == 2) {//should be x-values and time
+			//we can use index 0 here because it was the first name that was added 
+			PhyphoxBuffer xDataBuffer = newData.get(0);
+			
+			//alternatively just check the names of the buffers
+			String timeBufferName = textFieldTimeBuffer.getText();
+			Optional<PhyphoxBuffer> timeBufferOptional = PhyphoxBuffer.getByName(newData, timeBufferName);
+			PhyphoxBuffer timeBuffer;
+			//get the buffer if there was any with the searched name
+			if (timeBufferOptional.isPresent()) {
+				timeBuffer = timeBufferOptional.get();
+			}
+			else {
+				//if there is no such buffer something went wrong and should probably be logged or something...
+				return null;
+			}
+			
+			//append the data to the text area and the chart
+			List<XYChart.Data<String, Double>> chartDataPoints = new ArrayList<XYChart.Data<String, Double>>();
+			//there may be differences in the number of values in every array, so use the lower number of values
+			int numData = Math.min(newData.get(0).size(), newData.get(1).size());
+			for (int i = 0; i < numData; i++) {
+				double time = timeBuffer.getData()[i];
+				double xData = xDataBuffer.getData()[i];
+				//textAreaOutputPlainText.appendText(String.format("\n%.3f              %.5f", time, xData));
+				chartDataPoints.add(new XYChart.Data<String, Double>(String.format("%.4f", time), xData));
+			}
+			
+			return chartDataPoints;
+		}
+		else {
+			//there seems to be problems with the data (that should probably be logged)
+			return null;
+		}
+	}
+	
+	private void printData(List<PhyphoxBuffer> newData) {
+		for (PhyphoxBuffer buffer : newData) {
+			System.out.println("\n" + buffer.getName());
+			double[] data = buffer.getData();
+			for (int i = 0; i < data.length; i++) {
+				System.out.println(i + " " + data[i]);
 			}
 		}
 	}

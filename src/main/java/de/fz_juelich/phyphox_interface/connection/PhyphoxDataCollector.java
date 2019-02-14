@@ -46,23 +46,34 @@ public class PhyphoxDataCollector {
 		String basePath = connection.getUrlAsString();
 		String resourcePath = "/get?" + request;
 		
+		String httpRequest = getHttpRequestString(basePath, resourcePath);
+		
 		List<PhyphoxBuffer> data;
 		try {
-			data = getDataFromRestServerApache(basePath, resourcePath);
+			data = getDataFromRestServerApache(httpRequest);
 			return data;
 		}
 		catch (ParseException | IOException e) {
-			throw new PhyphoxConnectionException("An error occured while trying to get the data from the phone.", e);
+			throw new PhyphoxConnectionException(
+					"An error occured while trying to get the data from the phone. HTTP-Request was: \"" + httpRequest + "\"", e);
 		}
 	}
 	
 	/**
 	 * Collect the data from the phone using a HTTP-GET request and parse the data into a PhyphoxBuffer object.
 	 */
-	private List<PhyphoxBuffer> getDataFromRestServerApache(String basePath, String resourcePath) throws ParseException, IOException {
-		String jsonRepresentation = getDataInJsonRepresentation(basePath, resourcePath);
+	private List<PhyphoxBuffer> getDataFromRestServerApache(String httpRequest) throws ParseException, IOException {
+		String jsonRepresentation = getDataInJsonRepresentation(httpRequest);
 		List<PhyphoxBuffer> data = getBufferDataFromJsonRepresentation(jsonRepresentation);
 		return data;
+	}
+	
+	private String getHttpRequestString(String basePath, String resourcePath) {
+		String encodedUrl = "http://" + basePath + resourcePath;
+		//replace characters that seem to be not allowed in a java url
+		encodedUrl = encodedUrl.replace("|", "%7C");
+		encodedUrl = encodedUrl.replaceAll(" ", "%20");
+		return encodedUrl;
 	}
 	
 	/**
@@ -70,7 +81,7 @@ public class PhyphoxDataCollector {
 	 * 
 	 * Tutorial from: https://howtodoinjava.com/httpclient/jaxrs-client-httpclient-get-post/
 	 */
-	private String getDataInJsonRepresentation(String basePath, String resourcePath) throws ParseException, IOException {
+	private String getDataInJsonRepresentation(String request) throws ParseException, IOException {
 		
 		DefaultHttpClient httpClient = new DefaultHttpClient();
 		
@@ -78,12 +89,8 @@ public class PhyphoxDataCollector {
 			//Define a HttpGet request; You can choose between HttpPost, HttpDelete or HttpPut also.
 			//Choice depends on type of method you will be invoking.
 			
-			//encode the URL because the character '|' can't be used otherwise
-			//String encodedUrl = URLEncoder.encode("http://" + basePath + resourcePath, "UTF-8");
-			String encodedUrl = "http://" + basePath + resourcePath;
-			encodedUrl = encodedUrl.replace("|", "%7C");
-			System.out.println("\"" + encodedUrl + "\"");
-			HttpGet getRequest = new HttpGet(encodedUrl);
+			//System.out.println("Generating HTTP-GET request:\n" + request);
+			HttpGet getRequest = new HttpGet(request);
 			
 			//Set the API media type in http accept header (it always returns json for there is nothing else but...)
 			getRequest.addHeader("accept", "application/json");
