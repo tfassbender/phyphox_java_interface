@@ -66,8 +66,6 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 			PhyphoxConnection connection = new PhyphoxConnection(ip, port);
 			//the buffer names (can include the continues buffer but doesn't need to)
 			List<String> bufferNames = Arrays.asList(new String[] {textFieldNameBuffer1.getText(), textFieldTimeBuffer.getText()});
-			//a continues buffer like the time (optional; null if no one exists)
-			String continuesBufferName = textFieldTimeBuffer.getText();
 			//update data from the experiment every second
 			int updateRate = 1000;
 			
@@ -76,7 +74,7 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 			initializeChart();
 			
 			//create the PhyphoxData object that starts reading the buffers automatically
-			experimentData = new PhyphoxData(connection, bufferNames, null, updateRate);//TODO
+			experimentData = new PhyphoxData(connection, bufferNames, updateRate);
 			//register this object as PhyphoxDataListener to be informed about new data
 			experimentData.addDataListener(this);
 			
@@ -119,7 +117,6 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 		if (fullUpdate) {
 			//would be the case if there would be no continues buffer (like the time buffer)
 			//the data would not be appended at the end but fully updated...
-			
 			List<XYChart.Data<String, Double>> chartDataPoints = getAsChartData(newData);
 			
 			//set the chart data series (needs to be run in an JavaFX thread; therefore the Platform.runLater())
@@ -176,7 +173,7 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 		}
 	}
 	
-	private void printData(List<PhyphoxBuffer> newData) {
+	protected void printData(List<PhyphoxBuffer> newData) {
 		for (PhyphoxBuffer buffer : newData) {
 			System.out.println("\n" + buffer.getName());
 			double[] data = buffer.getData();

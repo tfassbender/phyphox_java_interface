@@ -22,7 +22,7 @@ class PhyphoxDataTest {
 		PhyphoxData data = new PhyphoxData("time", "buffer_x");
 		
 		assertEquals(2, data.getAllData().size());
-		assertEquals(1, data.getContinuesBufferIndex());
+		//assertEquals(1, data.getContinuesBufferIndex());
 	}
 	
 	@Test
@@ -159,6 +159,6 @@ class PhyphoxDataTest {
 		//use the real constructor to build a PhyphoxData object
 		//the object has to be constructed correctly but the update thread will cause a runtime exception
 		List<String> bufferNames = Arrays.asList(new String[] {"buffer_x", "buffer_y"});
-		new PhyphoxData(new PhyphoxConnection("1.1.1.1", 42), bufferNames, "time", 1000);
+		new PhyphoxData(new PhyphoxConnection("1.1.1.1", 42), bufferNames, 1000);
 	}
 }

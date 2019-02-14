@@ -25,8 +25,6 @@ public class PhyphoxData {
 	private int updateRate;//the update rate to request new data from the phone (in milliseconds)
 	private int[] lastRead;//the last indices of data that were read from the user
 	private Thread dataUpdateThread;//a thread that updates the data by sending request to the phones experiment
-	private int continuesBufferIndex;//an (optional) index of a continues buffer (e.g. time) so that the data doesn't need to be fully updated
-	private double lastContinuesBufferValue;//the last value of the continues buffer that can be used to only update the new data from the experiment
 	private List<PhyphoxDataListener> dataListeners;//listeners that react on new data
 	
 	/**
@@ -45,7 +43,7 @@ public class PhyphoxData {
 	 * @param updateRate
 	 *        The rate with that the data is updated locally (in milliseconds)
 	 */
-	public PhyphoxData(PhyphoxConnection connection, List<String> bufferNames, String continuesBufferName, int updateRate) {
+	public PhyphoxData(PhyphoxConnection connection, List<String> bufferNames, int updateRate) {
 		Objects.requireNonNull(connection, "A null object is no valid connection.");
 		if (bufferNames == null || bufferNames.isEmpty()) {
 			throw new IllegalArgumentException("Buffer names are empty. The names of the buffers are needed to get the data from the experiment.");
@@ -55,18 +53,6 @@ public class PhyphoxData {
 		}
 		List<String> bufferNamesClone = new ArrayList<String>(bufferNames);
 		collector = new PhyphoxDataCollector(connection);
-		//add the continues buffer if it's not already in the bufferNames parameter
-		if (continuesBufferName != null) {
-			continuesBufferIndex = bufferNamesClone.indexOf(continuesBufferName);
-			if (continuesBufferIndex == -1) {
-				continuesBufferIndex = bufferNamesClone.size();
-				bufferNamesClone.add(continuesBufferName);//add the continues buffer to the buffer names
-			}
-		}
-		else {
-			//no continues buffer is used
-			continuesBufferIndex = -1;
-		}
 		data = new ArrayList<PhyphoxBuffer>(bufferNamesClone.size());
 		this.updateRate = updateRate;
 		lastRead = new int[bufferNamesClone.size()];
@@ -84,21 +70,9 @@ public class PhyphoxData {
 	 * A PhyphoxDataObject that doesn't update any data (just for testing).
 	 */
 	@VisibleForTesting
-	protected PhyphoxData(String continuesBufferName, String... names) {
+	protected PhyphoxData(String... names) {
 		List<String> bufferNames = new ArrayList<String>(Arrays.asList(names));
 		boolean continuesBufferNameAdded = false;
-		if (continuesBufferName != null) {
-			continuesBufferIndex = bufferNames.indexOf(continuesBufferName);
-			if (continuesBufferIndex == -1) {
-				continuesBufferIndex = bufferNames.size();
-				bufferNames.add(continuesBufferName);//add the continues buffer to the buffer names
-				continuesBufferNameAdded = true;
-			}
-		}
-		else {
-			//no continues buffer is used
-			continuesBufferIndex = -1;
-		}
 		data = new ArrayList<PhyphoxBuffer>(bufferNames.size());
 		lastRead = new int[bufferNames.size()];
 		for (int i = 0; i < bufferNames.size(); i++) {
@@ -135,7 +109,7 @@ public class PhyphoxData {
 						Thread.currentThread().interrupt();
 					}
 					catch (PhyphoxConnectionException e) {
-						//throw new RuntimeException("A problem occured while trying to read the data from the experiment.", e);
+						throw new RuntimeException("A problem occured while trying to read the data from the experiment.", e);
 					}
 				}
 			}
@@ -163,40 +137,21 @@ public class PhyphoxData {
 	protected PhyphoxDataRequest createRequestForNewData() {
 		PhyphoxDataRequest request = null;
 		PhyphoxDataRequestBuilder builder = new PhyphoxDataRequestBuilder();
-		if (continuesBufferIndex != -1) {
-			for (int i = 0; i < data.size(); i++) {
-				builder.setBuffer(i, data.get(i).getName());
-				builder.setOffsetToBuffer(i, continuesBufferIndex, lastContinuesBufferValue);
-			}
-			builder.setOffset(continuesBufferIndex, lastContinuesBufferValue);
-			request = builder.build();
+		for (int i = 0; i < data.size(); i++) {
+			builder.setBuffer(i, data.get(i).getName());
+			//only full updates (added automatically)
 		}
-		else {
-			for (int i = 0; i < data.size(); i++) {
-				builder.setBuffer(i, data.get(i).getName());
-				//only full updates (added automatically)
-			}
-			request = builder.build();
-		}
+		request = builder.build();
 		return request;
 	}
 	
 	@VisibleForTesting
 	protected synchronized void addNewDataToBuffers(List<PhyphoxBuffer> newData) {
-		if (continuesBufferIndex != -1) {
-			//there is a continues buffer (e.g. time) -> just add the new data
-			for (PhyphoxBuffer buffer : newData) {
-				String name = buffer.getName();
-				PhyphoxBuffer existingBuffer = getBufferData(name);
-				existingBuffer.attachData(buffer.getData());
-			}
-		}
-		else {
-			//no continues buffer -> all data is fully updated
-			for (PhyphoxBuffer buffer : newData) {
-				int existingBufferIndex = getBufferIndex(buffer.getName());
-				data.set(existingBufferIndex, buffer);
-			}
+		//just append the new data
+		for (PhyphoxBuffer buffer : newData) {
+			String name = buffer.getName();
+			PhyphoxBuffer existingBuffer = getBufferData(name);
+			existingBuffer.attachData(buffer.getData());
 		}
 		informListeners();
 	}
@@ -209,10 +164,10 @@ public class PhyphoxData {
 			//get the new data (sets the last read indices)
 			List<PhyphoxBuffer> newData = getNewData();
 			//full updates are only used when there is no continues buffer
-			boolean fullUpdate = continuesBufferIndex == -1;
+			boolean fullUpdate = false;//no full updates in this mode
 			for (PhyphoxDataListener listener : dataListeners) {
 				listener.updateData(newData, fullUpdate);
-			}			
+			}
 		}
 		//else: if there is no listener don't set the last read indices
 	}
@@ -321,10 +276,5 @@ public class PhyphoxData {
 	}
 	public void removeDataListener(PhyphoxDataListener listener) {
 		dataListeners.remove(listener);
-	}
-	
-	@VisibleForTesting
-	protected int getContinuesBufferIndex() {
-		return continuesBufferIndex;
 	}
 }
