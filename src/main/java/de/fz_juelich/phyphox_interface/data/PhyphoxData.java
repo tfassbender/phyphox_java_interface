@@ -27,6 +27,7 @@ public class PhyphoxData {
 	private Thread dataUpdateThread;//a thread that updates the data by sending request to the phones experiment
 	private int continuesBufferIndex;//an (optional) index of a continues buffer (e.g. time) so that the data doesn't need to be fully updated
 	private double lastContinuesBufferValue;//the last value of the continues buffer that can be used to only update the new data from the experiment
+	private List<PhyphoxDataListener> dataListeners;//listeners that react on new data
 	
 	/**
 	 * Create a new PhyphoxData object to model the buffered data from the experiment in java.
@@ -75,6 +76,8 @@ public class PhyphoxData {
 			//create buffers
 			data.add(new PhyphoxBuffer(bufferNamesClone.get(i), new double[0]));
 		}
+		//create a list for the listeners
+		dataListeners = new ArrayList<PhyphoxDataListener>();
 		startUpdateThread();
 	}
 	/**
@@ -107,6 +110,8 @@ public class PhyphoxData {
 		if (continuesBufferNameAdded) {
 			bufferNames.remove(bufferNames.size() - 1);//remove continues buffer that was added before to prevent side effects
 		}
+		//create a list for the listeners
+		dataListeners = new ArrayList<PhyphoxDataListener>();
 	}
 	
 	private void startUpdateThread() {
@@ -142,9 +147,16 @@ public class PhyphoxData {
 	/**
 	 * Restart the data update thread (e.g. after it crashed). When the PhyphoxData object is created the thread is started automatically.
 	 */
-	public void restartUpdateThread() {
+	public void restart() {
 		dataUpdateThread.interrupt();//interrupt the old thread if it's still running
 		startUpdateThread();//start a new one
+	}
+	
+	/**
+	 * Interrupt the update thread to stop the data updates.
+	 */
+	public void stop() {
+		dataUpdateThread.interrupt();
 	}
 	
 	@VisibleForTesting
@@ -170,7 +182,7 @@ public class PhyphoxData {
 	}
 	
 	@VisibleForTesting
-	protected void addNewDataToBuffers(List<PhyphoxBuffer> newData) {
+	protected synchronized void addNewDataToBuffers(List<PhyphoxBuffer> newData) {
 		if (continuesBufferIndex != -1) {
 			//there is a continues buffer (e.g. time) -> just add the new data
 			for (PhyphoxBuffer buffer : newData) {
@@ -186,13 +198,30 @@ public class PhyphoxData {
 				data.set(existingBufferIndex, buffer);
 			}
 		}
+		informListeners();
+	}
+	
+	/**
+	 * Inform all listeners about the new data
+	 */
+	private void informListeners() {
+		if (!dataListeners.isEmpty()) {
+			//get the new data (sets the last read indices)
+			List<PhyphoxBuffer> newData = getNewData();
+			//full updates are only used when there is no continues buffer
+			boolean fullUpdate = continuesBufferIndex == -1;
+			for (PhyphoxDataListener listener : dataListeners) {
+				listener.updateData(newData, fullUpdate);
+			}			
+		}
+		//else: if there is no listener don't set the last read indices
 	}
 	
 	/**
 	 * Get all buffers from the experiment.<br>
 	 * The buffers are not cloned, so be careful when changing them.
 	 */
-	public List<PhyphoxBuffer> getAllData() {
+	public synchronized List<PhyphoxBuffer> getAllData() {
 		List<PhyphoxBuffer> allData = new ArrayList<PhyphoxBuffer>(data.size());
 		for (int i = 0; i < data.size(); i++) {
 			allData.add(getBufferData(i));
@@ -203,14 +232,14 @@ public class PhyphoxData {
 	 * Get a single buffer from the experiment by it's name.<br>
 	 * The buffers are not cloned, so be careful when changing them.
 	 */
-	public PhyphoxBuffer getBufferData(String buffer) {
+	public synchronized PhyphoxBuffer getBufferData(String buffer) {
 		return getBufferData(getBufferIndex(buffer));
 	}
 	/**
 	 * Get a single buffer from the experiment by it's index.<br>
 	 * The buffers are not cloned, so be careful when changing them.
 	 */
-	public PhyphoxBuffer getBufferData(int buffer) {
+	public synchronized PhyphoxBuffer getBufferData(int buffer) {
 		lastRead[buffer] = data.get(buffer).size();
 		return data.get(buffer);
 	}
@@ -219,7 +248,7 @@ public class PhyphoxData {
 	 * Get every buffers new data (in form of a new buffer). The new data includes everything on from the last time the buffer was read.<br>
 	 * The buffers are not cloned, so be careful when changing them.
 	 */
-	public List<PhyphoxBuffer> getNewData() {
+	public synchronized List<PhyphoxBuffer> getNewData() {
 		List<PhyphoxBuffer> newDataBuffers = new ArrayList<PhyphoxBuffer>(data.size());
 		for (int i = 0; i < data.size(); i++) {
 			newDataBuffers.add(getNewBufferData(i));
@@ -231,7 +260,7 @@ public class PhyphoxData {
 	 * read.<br>
 	 * The buffers are not cloned, so be careful when changing them.
 	 */
-	public PhyphoxBuffer getNewBufferData(String buffer) {
+	public synchronized PhyphoxBuffer getNewBufferData(String buffer) {
 		return getNewBufferData(getBufferIndex(buffer));
 	}
 	/**
@@ -239,7 +268,7 @@ public class PhyphoxData {
 	 * read.<br>
 	 * The buffers are not cloned, so be careful when changing them.
 	 */
-	public PhyphoxBuffer getNewBufferData(int buffer) {
+	public synchronized PhyphoxBuffer getNewBufferData(int buffer) {
 		int startIndex = Math.max(0, lastRead[buffer]);
 		PhyphoxBuffer newDataBuffer = data.get(buffer).getCopyFromIndex(startIndex);//create a buffer with only the new data
 		lastRead[buffer] = data.get(buffer).getData().length - 1;//update the index
@@ -249,7 +278,7 @@ public class PhyphoxData {
 	/**
 	 * Delete all the data from the buffers (except of the last value in the buffer to know what data is needed next from the experiment).
 	 */
-	public void clearAllBuffers() {
+	public synchronized void clearAllBuffers() {
 		for (int i = 0; i < data.size(); i++) {
 			clearBuffer(i);
 		}
@@ -258,14 +287,14 @@ public class PhyphoxData {
 	 * Delete all the data from a single buffer, identified by it's name (except of the last value in the buffer to know what data is needed next from
 	 * the experiment).
 	 */
-	public void clearBuffer(String buffer) {
+	public synchronized void clearBuffer(String buffer) {
 		clearBuffer(getBufferIndex(buffer));
 	}
 	/**
 	 * Delete all the data from a single buffer, identified by it's index (except of the last value in the buffer to know what data is needed next
 	 * from the experiment).
 	 */
-	public void clearBuffer(int buffer) {
+	public synchronized void clearBuffer(int buffer) {
 		PhyphoxBuffer fullBuffer = data.get(buffer);
 		PhyphoxBuffer clearBuffer = new PhyphoxBuffer(fullBuffer.getName(), new double[0]);
 		data.set(buffer, clearBuffer);
@@ -285,6 +314,13 @@ public class PhyphoxData {
 		else {
 			return index;
 		}
+	}
+	
+	public void addDataListener(PhyphoxDataListener listener) {
+		dataListeners.add(listener);
+	}
+	public void removeDataListener(PhyphoxDataListener listener) {
+		dataListeners.remove(listener);
 	}
 	
 	@VisibleForTesting

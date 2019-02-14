@@ -14,8 +14,7 @@
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
 
-
-<AnchorPane prefHeight="600.0" prefWidth="800.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/10.0.1">
+<AnchorPane prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/10.0.1" xmlns:fx="http://javafx.com/fxml/1">
    <children>
       <GridPane layoutX="-166.0" layoutY="-110.0" prefHeight="0.0" prefWidth="34.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
         <columnConstraints>
@@ -43,7 +42,7 @@
                <children>
                   <Label text="Phyphox-IP:" />
                   <Label text="Port:" GridPane.columnIndex="2" />
-                  <TextField fx:id="textFieldPhyphoxIp" GridPane.columnIndex="1">
+                  <TextField fx:id="textFieldPhyphoxIp" text="172.18.50.163" GridPane.columnIndex="1">
                      <GridPane.margin>
                         <Insets left="10.0" right="10.0" />
                      </GridPane.margin>
@@ -53,15 +52,15 @@
                         <Insets left="10.0" right="10.0" />
                      </GridPane.margin>
                   </TextField>
-                  <Button fx:id="buttonReadBuffers" mnemonicParsing="false" text="Read Buffers" GridPane.columnSpan="2" GridPane.rowIndex="3" />
+                  <Button fx:id="buttonReadBuffers" mnemonicParsing="false" text="Start Reader" GridPane.columnSpan="2" GridPane.rowIndex="3" />
                   <Label text="Name Buffer 1:" GridPane.rowIndex="1" />
-                  <Label text="Name Buffer 2:" GridPane.rowIndex="2" />
-                  <TextField fx:id="textFieldNameBuffer1" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                  <TextField fx:id="textFieldNameBuffer1" text="accX" GridPane.columnIndex="1" GridPane.rowIndex="1">
                      <GridPane.margin>
                         <Insets left="10.0" right="10.0" />
                      </GridPane.margin>
                   </TextField>
-                  <TextField fx:id="textFieldNameBuffer2" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                  <Label text="Time Buffer:" GridPane.rowIndex="2" />
+                  <TextField fx:id="textFieldTimeBuffer" text="acc_time" GridPane.columnIndex="1" GridPane.rowIndex="2">
                      <GridPane.margin>
                         <Insets left="10.0" right="10.0" />
                      </GridPane.margin>

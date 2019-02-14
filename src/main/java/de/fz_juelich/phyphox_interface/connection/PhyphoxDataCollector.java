@@ -77,7 +77,13 @@ public class PhyphoxDataCollector {
 		try {
 			//Define a HttpGet request; You can choose between HttpPost, HttpDelete or HttpPut also.
 			//Choice depends on type of method you will be invoking.
-			HttpGet getRequest = new HttpGet(basePath + resourcePath);
+			
+			//encode the URL because the character '|' can't be used otherwise
+			//String encodedUrl = URLEncoder.encode("http://" + basePath + resourcePath, "UTF-8");
+			String encodedUrl = "http://" + basePath + resourcePath;
+			encodedUrl = encodedUrl.replace("|", "%7C");
+			System.out.println("\"" + encodedUrl + "\"");
+			HttpGet getRequest = new HttpGet(encodedUrl);
 			
 			//Set the API media type in http accept header (it always returns json for there is nothing else but...)
 			getRequest.addHeader("accept", "application/json");

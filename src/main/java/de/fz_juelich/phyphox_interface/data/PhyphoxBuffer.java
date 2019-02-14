@@ -1,5 +1,8 @@
 package de.fz_juelich.phyphox_interface.data;
 
+import java.util.List;
+import java.util.Optional;
+
 public class PhyphoxBuffer implements Cloneable {
 	
 	private String name;
@@ -13,8 +16,13 @@ public class PhyphoxBuffer implements Cloneable {
 		this.name = copy.name;
 		this.data = new double[Math.max(copy.data.length - startIndex, 0)];
 		if (copy.size() - startIndex > 0) {
-			System.arraycopy(copy.data, startIndex, data, 0, data.length);			
+			System.arraycopy(copy.data, startIndex, data, 0, data.length);
 		}
+	}
+	
+	public static Optional<PhyphoxBuffer> getByName(List<PhyphoxBuffer> buffers, String name) {
+		Optional<PhyphoxBuffer> searchedBuffer = buffers.stream().filter(buffer -> buffer.getName().equals(name)).findFirst();
+		return searchedBuffer;
 	}
 	
 	public String getName() {
