@@ -45,7 +45,13 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 	
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
+		//set the button actions
 		buttonReadBuffers.setOnAction(e -> startStopExperimentReader());
+		
+		//configure the plot
+		chartOutputData.setCreateSymbols(false);
+		chartOutputData.setAnimated(false);
+		chartOutputData.setTitle("Phyphox Experiment Data");
 	}
 	
 	private void startStopExperimentReader() {
@@ -106,7 +112,6 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 		//add a new data series where the new data can be appended
 		XYChart.Series<String, Double> series = new XYChart.Series<String, Double>();
 		chartOutputData.getData().add(series);
-		chartOutputData.setAnimated(false);
 	}
 	
 	@Override
@@ -158,12 +163,33 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 			List<XYChart.Data<String, Double>> chartDataPoints = new ArrayList<XYChart.Data<String, Double>>();
 			//there may be differences in the number of values in every array, so use the lower number of values
 			int numData = Math.min(newData.get(0).size(), newData.get(1).size());
-			for (int i = 0; i < numData; i++) {
-				double time = timeBuffer.getData()[i];
-				double xData = xDataBuffer.getData()[i];
-				//textAreaOutputPlainText.appendText(String.format("\n%.3f              %.5f", time, xData));
-				chartDataPoints.add(new XYChart.Data<String, Double>(String.format("%.4f", time), xData));
+			
+			//use a maximum number of points in the plot (otherwise these FX-Plots will will get really slow). 
+			int maxDataPoints = 1000;
+			int displayedRestClass;
+			if (numData > maxDataPoints) {
+				displayedRestClass = numData / maxDataPoints;
 			}
+			else {
+				displayedRestClass = 1;//display all
+			}
+			
+			//also add the values to the text area
+			StringBuilder sb = new StringBuilder();
+			sb.append("Time      -      Value");
+			
+			for (int i = 0; i < numData; i++) {
+				//only display some of the measured points
+				if (i % displayedRestClass == 0) {
+					
+					double time = timeBuffer.getData()[i];
+					double xData = xDataBuffer.getData()[i];
+					
+					sb.append(String.format("\n%.3f              %.5f", time, xData));
+					chartDataPoints.add(new XYChart.Data<String, Double>(String.format("%.4f", time), xData));
+				}
+			}
+			textAreaOutputPlainText.setText(sb.toString());
 			
 			return chartDataPoints;
 		}
