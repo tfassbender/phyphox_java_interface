@@ -15,7 +15,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Matchers;
 
-import de.fz_juelich.phyphox_interface.connection.PhyphoxConnection;
+import de.fz_juelich.phyphox_interface.connection.PhyphoxConnectionSettings;
 import de.fz_juelich.phyphox_interface.connection.PhyphoxDataRequest;
 
 class PhyphoxExperimentTest {
@@ -165,7 +165,7 @@ class PhyphoxExperimentTest {
 		//use the real constructor to build a PhyphoxData object
 		//the object has to be constructed correctly but the update thread will cause a runtime exception
 		List<String> bufferNames = Arrays.asList(new String[] {"buffer_x", "buffer_y"});
-		new PhyphoxExperiment(new PhyphoxConnection("1.1.1.1", 42), bufferNames, 1000);
+		new PhyphoxExperiment(new PhyphoxConnectionSettings("1.1.1.1", 42), bufferNames, 1000);
 	}
 	
 	@Test

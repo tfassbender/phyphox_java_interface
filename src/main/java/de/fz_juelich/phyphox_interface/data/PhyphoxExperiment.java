@@ -7,9 +7,9 @@ import java.util.Objects;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import de.fz_juelich.phyphox_interface.connection.PhyphoxConnection;
+import de.fz_juelich.phyphox_interface.connection.PhyphoxConnectionSettings;
 import de.fz_juelich.phyphox_interface.connection.PhyphoxConnectionException;
-import de.fz_juelich.phyphox_interface.connection.PhyphoxDataCollector;
+import de.fz_juelich.phyphox_interface.connection.PhyphoxConnection;
 import de.fz_juelich.phyphox_interface.connection.PhyphoxDataRequest;
 import de.fz_juelich.phyphox_interface.connection.PhyphoxDataRequestBuilder;
 
@@ -20,7 +20,7 @@ import de.fz_juelich.phyphox_interface.connection.PhyphoxDataRequestBuilder;
  */
 public class PhyphoxExperiment {
 	
-	private PhyphoxDataCollector collector;//the connection to the phone (parses JSON, ...)
+	private PhyphoxConnection collector;//the connection to the phone (parses JSON, ...)
 	private List<PhyphoxBuffer> data;//all the data from the phone buffers
 	private int updateRate;//the update rate to request new data from the phone (in milliseconds)
 	private int[] lastRead;//the last indices of data that were read from the user
@@ -43,7 +43,7 @@ public class PhyphoxExperiment {
 	 * @param updateRate
 	 *        The rate with that the data is updated locally (in milliseconds)
 	 */
-	public PhyphoxExperiment(PhyphoxConnection connection, List<String> bufferNames, int updateRate) {
+	public PhyphoxExperiment(PhyphoxConnectionSettings connection, List<String> bufferNames, int updateRate) {
 		Objects.requireNonNull(connection, "A null object is no valid connection.");
 		if (bufferNames == null || bufferNames.isEmpty()) {
 			throw new IllegalArgumentException("Buffer names are empty. The names of the buffers are needed to get the data from the experiment.");
@@ -52,7 +52,7 @@ public class PhyphoxExperiment {
 			throw new IllegalArgumentException("The update rate must be a value greater than zero.");
 		}
 		List<String> bufferNamesClone = new ArrayList<String>(bufferNames);
-		collector = new PhyphoxDataCollector(connection);
+		collector = new PhyphoxConnection(connection);
 		data = new ArrayList<PhyphoxBuffer>(bufferNamesClone.size());
 		this.updateRate = updateRate;
 		lastRead = new int[bufferNamesClone.size()];
@@ -121,7 +121,7 @@ public class PhyphoxExperiment {
 	/**
 	 * Restart the data update thread (e.g. after it crashed). When the PhyphoxData object is created the thread is started automatically.
 	 */
-	public void restart() {
+	public void restartConnection() {
 		dataUpdateThread.interrupt();//interrupt the old thread if it's still running
 		startUpdateThread();//start a new one
 	}
@@ -129,7 +129,7 @@ public class PhyphoxExperiment {
 	/**
 	 * Interrupt the update thread to stop the data updates.
 	 */
-	public void stop() {
+	public void stopConnection() {
 		dataUpdateThread.interrupt();
 	}
 	
@@ -194,7 +194,7 @@ public class PhyphoxExperiment {
 	 * Get a single buffer from the experiment by it's index.<br>
 	 * The buffers are not cloned, so be careful when changing them.
 	 */
-	public synchronized PhyphoxBuffer getBufferData(int buffer) {
+	protected synchronized PhyphoxBuffer getBufferData(int buffer) {
 		lastRead[buffer] = data.get(buffer).size();
 		return data.get(buffer);
 	}
@@ -223,7 +223,7 @@ public class PhyphoxExperiment {
 	 * read.<br>
 	 * The buffers are not cloned, so be careful when changing them.
 	 */
-	public synchronized PhyphoxBuffer getNewBufferData(int buffer) {
+	protected synchronized PhyphoxBuffer getNewBufferData(int buffer) {
 		int startIndex = Math.max(0, lastRead[buffer]);
 		PhyphoxBuffer newDataBuffer = data.get(buffer).getCopyFromIndex(startIndex);//create a buffer with only the new data
 		lastRead[buffer] = data.get(buffer).getData().length - 1;//update the index
@@ -249,11 +249,24 @@ public class PhyphoxExperiment {
 	 * Delete all the data from a single buffer, identified by it's index (except of the last value in the buffer to know what data is needed next
 	 * from the experiment).
 	 */
-	public synchronized void clearBuffer(int buffer) {
+	protected synchronized void clearBuffer(int buffer) {
 		PhyphoxBuffer fullBuffer = data.get(buffer);
 		PhyphoxBuffer clearBuffer = new PhyphoxBuffer(fullBuffer.getName(), new double[0]);
 		data.set(buffer, clearBuffer);
 		lastRead[buffer] = -1;//reset the last read index
+	}
+	
+	/**
+	 * Remote start the experiment on the phone.
+	 */
+	public void startExperiment() {
+		//TODO
+	}
+	/**
+	 * Remote stop the experiment on the phone.
+	 */
+	public void stopExperiment() {
+		//TODO
 	}
 	
 	private int getBufferIndex(String name) {

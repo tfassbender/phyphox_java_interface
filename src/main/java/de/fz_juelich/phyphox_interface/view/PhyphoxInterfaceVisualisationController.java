@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
-import de.fz_juelich.phyphox_interface.connection.PhyphoxConnection;
+import de.fz_juelich.phyphox_interface.connection.PhyphoxConnectionSettings;
 import de.fz_juelich.phyphox_interface.data.PhyphoxBuffer;
 import de.fz_juelich.phyphox_interface.data.PhyphoxExperiment;
 import de.fz_juelich.phyphox_interface.data.PhyphoxDataListener;
@@ -69,7 +69,7 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 				port = 8080;
 			}
 			//a connection object with an IP and a port
-			PhyphoxConnection connection = new PhyphoxConnection(ip, port);
+			PhyphoxConnectionSettings connection = new PhyphoxConnectionSettings(ip, port);
 			//the buffer names (can include the continues buffer but doesn't need to)
 			List<String> bufferNames = Arrays.asList(new String[] {textFieldNameBuffer1.getText(), textFieldTimeBuffer.getText()});
 			//update data from the experiment every second
@@ -91,7 +91,7 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 			//reader already running -> stop the reader
 			
 			//the data collector needs to be stopped before deleting it because it has a thread that would stay alive
-			experimentData.stop();
+			experimentData.stopConnection();
 			//after stopping it the reference can be set to null and the Java-GC does the rest
 			experimentData = null;
 			
