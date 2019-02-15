@@ -7,5 +7,5 @@ import java.util.List;
  */
 public interface PhyphoxDataListener {
 	
-	public void updateData(List<PhyphoxBuffer> newData, boolean fullUpdate);
+	public void updateData(List<PhyphoxBuffer> newData);
 }

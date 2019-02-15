@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
+import de.fz_juelich.phyphox_interface.connection.PhyphoxConnectionException;
 import de.fz_juelich.phyphox_interface.connection.PhyphoxConnectionSettings;
 import de.fz_juelich.phyphox_interface.data.PhyphoxBuffer;
 import de.fz_juelich.phyphox_interface.data.PhyphoxExperiment;
@@ -34,19 +35,30 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 	@FXML
 	private TextField textFieldTimeBuffer;
 	@FXML
-	private Button buttonReadBuffers;
+	private Button buttonStartExperiment;
+	@FXML
+	private Button buttonStopExperiment;
+	@FXML
+	private Button buttonClearData;
 	
 	@FXML
 	private TextArea textAreaOutputPlainText;
 	@FXML
 	private LineChart<String, Double> chartOutputData;
 	
-	private PhyphoxExperiment experimentData;
+	private PhyphoxExperiment experiment;
+	
+	public PhyphoxInterfaceVisualisationController() {
+		//don't create the experiment here because we don't know the names of the buffers yet.
+		//(only in this example... if you already know the names you can create it here)
+	}
 	
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
 		//set the button actions
-		buttonReadBuffers.setOnAction(e -> startStopExperimentReader());
+		buttonStartExperiment.setOnAction(e -> startExperiment());
+		buttonStopExperiment.setOnAction(e -> stopExperiment());
+		buttonClearData.setOnAction(e -> clearExperimentData());
 		
 		//configure the plot
 		chartOutputData.setCreateSymbols(false);
@@ -54,50 +66,81 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 		chartOutputData.setTitle("Phyphox Experiment Data");
 	}
 	
-	private void startStopExperimentReader() {
-		if (experimentData == null) {
-			//no experiment reader -> start the reader
-			
-			//read the IP and the port the user entered
-			String ip = textFieldPhyphoxIp.getText();
-			int port;
+	private void startExperiment() {
+		//read the IP and the port the user entered
+		String ip = textFieldPhyphoxIp.getText();
+		int port;
+		try {
+			port = Integer.parseInt(textFieldPhyphoxPort.getText());
+		}
+		catch (NumberFormatException nfe) {
+			//if the port can't be interpreted use the default port 8080
+			port = 8080;
+		}
+		//a connection object with an IP and a port
+		PhyphoxConnectionSettings connection = new PhyphoxConnectionSettings(ip, port);
+		//the buffer names (can include the continues buffer but doesn't need to)
+		List<String> bufferNames = Arrays.asList(new String[] {textFieldNameBuffer1.getText(), textFieldTimeBuffer.getText()});
+		//update data from the experiment every second
+		int updateRate = 1000;
+		
+		//initialize the textArea and the chart before starting the data update
+		initializeTextArea();
+		initializeChart();
+		
+		//if there is an old experiment running try to stop it first
+		if (experiment != null) {
 			try {
-				port = Integer.parseInt(textFieldPhyphoxPort.getText());
+				experiment.stopExperiment();
 			}
-			catch (NumberFormatException nfe) {
-				//if the port can't be interpreted use the default port 8080
-				port = 8080;
+			catch (PhyphoxConnectionException pce) {
+				//can be ignored here; it will probably cause an error when starting the new experiment which is more important
 			}
-			//a connection object with an IP and a port
-			PhyphoxConnectionSettings connection = new PhyphoxConnectionSettings(ip, port);
-			//the buffer names (can include the continues buffer but doesn't need to)
-			List<String> bufferNames = Arrays.asList(new String[] {textFieldNameBuffer1.getText(), textFieldTimeBuffer.getText()});
-			//update data from the experiment every second
-			int updateRate = 1000;
-			
-			//initialize the textArea and the chart before starting the data update
-			initializeTextArea();
-			initializeChart();
-			
-			//create the PhyphoxData object that starts reading the buffers automatically
-			experimentData = new PhyphoxExperiment(connection, bufferNames, updateRate);
-			//register this object as PhyphoxDataListener to be informed about new data
-			experimentData.addDataListener(this);
-			
-			//change the button text
-			buttonReadBuffers.setText("Stop Reader");
 		}
-		else {
-			//reader already running -> stop the reader
-			
-			//the data collector needs to be stopped before deleting it because it has a thread that would stay alive
-			experimentData.stopConnection();
-			//after stopping it the reference can be set to null and the Java-GC does the rest
-			experimentData = null;
-			
-			//change the button text
-			buttonReadBuffers.setText("Start Reader");
+		//create the PhyphoxExperiment object that starts reading the buffers automatically
+		experiment = new PhyphoxExperiment(connection, bufferNames, updateRate);
+		//register this object as PhyphoxDataListener to be informed about new data
+		experiment.addDataListener(this);
+		//start the experiment
+		try {
+			experiment.startExperiment();
 		}
+		catch (PhyphoxConnectionException pce) {
+			//when something goes wrong, just give a message on the screen
+			DialogUtils.showExceptionDialog("Problems while starting the experiment", pce.getMessage(), pce);
+			//in a real application the error should probably be handled
+		}
+	}
+	
+	private void stopExperiment() {
+		if (experiment != null) {
+			//stop the experiment if there is one
+			try {
+				experiment.stopExperiment();
+			}
+			catch (PhyphoxConnectionException pce) {
+				//when something goes wrong, just give a message on the screen
+				DialogUtils.showExceptionDialog("Problems while stopping the experiment", pce.getMessage(), pce);
+				//in a real application the error should probably be handled
+			}
+		}
+	}
+	
+	private void clearExperimentData() {
+		if (experiment != null) {
+			//clear the data from the experiment if there is one
+			try {
+				experiment.clearExperimentData();
+			}
+			catch (PhyphoxConnectionException pce) {
+				//when something goes wrong, just give a message on the screen
+				DialogUtils.showExceptionDialog("Problems while clearing the experiment's data", pce.getMessage(), pce);
+				//in a real application the error should probably be handled
+			}
+		}
+		//clear the text area and the plot
+		textAreaOutputPlainText.clear();
+		chartOutputData.getData().clear();
 	}
 	
 	private void initializeTextArea() {
@@ -111,34 +154,25 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 		chartOutputData.getData().clear();
 		//add a new data series where the new data can be appended
 		XYChart.Series<String, Double> series = new XYChart.Series<String, Double>();
+		series.setName("Some fancy phyphox data");
 		chartOutputData.getData().add(series);
 	}
 	
 	@Override
-	public void updateData(List<PhyphoxBuffer> newData, boolean fullUpdate) {
+	public void updateData(List<PhyphoxBuffer> newData) {
 		//print the data for testing:
 		//printData(newData);
 		
-		if (fullUpdate) {
-			//would be the case if there would be no continues buffer (like the time buffer)
-			//the data would not be appended at the end but fully updated...
-			List<XYChart.Data<String, Double>> chartDataPoints = getAsChartData(newData);
-			
-			//set the chart data series (needs to be run in an JavaFX thread; therefore the Platform.runLater())
-			Platform.runLater(() -> {
-				chartOutputData.getData().clear();
-				XYChart.Series<String, Double> series = new XYChart.Series<String, Double>();
-				series.getData().addAll(chartDataPoints);
-				chartOutputData.getData().add(series);
-			});
-		}
-		else {
-			//should be the case when there is a continues buffer (e.g. the time buffer)
-			List<XYChart.Data<String, Double>> chartDataPoints = getAsChartData(newData);
-			
-			//append at the end of the chart data series (needs to be run in an JavaFX thread; therefore the Platform.runLater())
-			Platform.runLater(() -> chartOutputData.getData().get(0).getData().addAll(chartDataPoints));
-		}
+		List<XYChart.Data<String, Double>> chartDataPoints = getAsChartData(newData);
+		
+		//set the chart data series (needs to be run in an JavaFX thread; therefore the Platform.runLater())
+		Platform.runLater(() -> {
+			chartOutputData.getData().clear();
+			XYChart.Series<String, Double> series = new XYChart.Series<String, Double>();
+			series.getData().addAll(chartDataPoints);
+			series.setName("Some fancy phyphox data");
+			chartOutputData.getData().add(series);
+		});
 	}
 	
 	private List<XYChart.Data<String, Double>> getAsChartData(List<PhyphoxBuffer> newData) {
@@ -199,7 +233,8 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 		}
 	}
 	
-	protected void printData(List<PhyphoxBuffer> newData) {
+	@SuppressWarnings("unused")
+	private void printData(List<PhyphoxBuffer> newData) {
 		for (PhyphoxBuffer buffer : newData) {
 			System.out.println("\n" + buffer.getName());
 			double[] data = buffer.getData();

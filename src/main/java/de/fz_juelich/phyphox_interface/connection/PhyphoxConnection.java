@@ -16,6 +16,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 
 import de.fz_juelich.phyphox_interface.data.PhyphoxBuffer;
 
@@ -40,7 +41,11 @@ public class PhyphoxConnection {
 	}
 	
 	/**
-	 * Collect the data from the phone using a HTTP-GET request.
+	 * Collect the data from the phone using a HTTP-GET request.<br>
+	 * 
+	 * For more information see:
+	 * {@link https://github.com/Staacks/phyphox-android/blob/master/app/src/main/java/de/rwth_aachen/phyphox/remoteServer.java} (local class
+	 * getCommandHandler)
 	 */
 	public List<PhyphoxBuffer> getData(String request) throws PhyphoxConnectionException {
 		String basePath = connection.getUrlAsString();
@@ -56,6 +61,125 @@ public class PhyphoxConnection {
 		catch (ParseException | IOException e) {
 			throw new PhyphoxConnectionException(
 					"An error occured while trying to get the data from the phone. HTTP-Request was: \"" + httpRequest + "\"", e);
+		}
+	}
+	
+	/**
+	 * Remote start the experiment on the phone.
+	 */
+	public void startExperiment() throws PhyphoxConnectionException {
+		String basePath = connection.getUrlAsString();
+		String resourcePath = "/control?cmd=start";
+		String startExperimentRequest = getHttpRequestString(basePath, resourcePath); 
+		try {
+			String jsonResultString = getDataInJsonRepresentation(startExperimentRequest);
+			boolean result = getResultFromJsonRepresentation(jsonResultString);
+			if (!result) {
+				//the starting of the experiment seems to be failed for unknown reasons
+				throw new PhyphoxConnectionException(
+						"The experiment couldn't be started. The phone's remote server sent a negative answer for unknown reasons.");
+			}
+		}
+		catch (ParseException | IOException | JsonSyntaxException e) {
+			throw new PhyphoxConnectionException("Problems occured while trying to start the experiment.", e);
+		}
+	}
+	/**
+	 * Remote stop the experiment on the phone.
+	 */
+	public void stopExperiment() throws PhyphoxConnectionException {
+		String basePath = connection.getUrlAsString();
+		String resourcePath = "/control?cmd=stop";
+		String stopExperimentRequest = getHttpRequestString(basePath, resourcePath); 
+		try {
+			String jsonResultString = getDataInJsonRepresentation(stopExperimentRequest);
+			boolean result = getResultFromJsonRepresentation(jsonResultString);
+			if (!result) {
+				//the stopping of the experiment seems to be failed for unknown reasons
+				throw new PhyphoxConnectionException(
+						"The experiment couldn't be stopped. The phone's remote server sent a negative answer for unknown reasons.");
+			}
+		}
+		catch (ParseException | IOException | JsonSyntaxException e) {
+			throw new PhyphoxConnectionException("Problems occured while trying to stop the experiment.", e);
+		}
+	}
+	
+	/**
+	 * Delete all the data of this experiment on the phone.
+	 */
+	public void clearExperimentData() throws PhyphoxConnectionException {
+		String basePath = connection.getUrlAsString();
+		String resourcePath = "/control?cmd=clear";
+		String clearExperimentRequest = getHttpRequestString(basePath, resourcePath);
+		try {
+			String jsonResultString = getDataInJsonRepresentation(clearExperimentRequest);
+			boolean result = getResultFromJsonRepresentation(jsonResultString);
+			if (!result) {
+				//the deleting of the experiment's data seems to be failed for unknown reasons
+				throw new PhyphoxConnectionException(
+						"The experiment data couldn't be cleared. The phone's remote server sent a negative answer for unknown reasons.");
+			}
+		}
+		catch (ParseException | IOException | JsonSyntaxException e) {
+			throw new PhyphoxConnectionException("Problems occured while trying to clear the experiment's data.", e);
+		}
+	}
+	/**
+	 * Send an user given value from an input element to a buffer on the phone.<br>
+	 * 
+	 * For more information see:
+	 * {@link https://github.com/Staacks/phyphox-android/blob/master/app/src/main/java/de/rwth_aachen/phyphox/remoteServer.java} (local class
+	 * controlCommandHandler)
+	 * 
+	 * @param bufferName
+	 *        The name of the buffer that gets the value.
+	 * 
+	 * @param value
+	 *        The value that is to be added to the buffer.
+	 */
+	public void setExperimentBuffer(String bufferName, String value) throws PhyphoxConnectionException {
+		String basePath = connection.getUrlAsString();
+		String resourcePath = "/control?cmd=set&buffer=" + bufferName + "&value=" + value;
+		String setExperimentBufferRequest = getHttpRequestString(basePath, resourcePath);
+		try {
+			String jsonResultString = getDataInJsonRepresentation(setExperimentBufferRequest);
+			boolean result = getResultFromJsonRepresentation(jsonResultString);
+			if (!result) {
+				//the starting of the experiment seems to be failed for unknown reasons
+				throw new PhyphoxConnectionException(
+						"The buffer data could not be set. The phone's remote server sent a negative answer for unknown reasons.");
+			}
+		}
+		catch (ParseException | IOException | JsonSyntaxException e) {
+			throw new PhyphoxConnectionException("Problems occured while trying to pass the data to the experiment's buffer.", e);
+		}
+	}
+	/**
+	 * Trigger an element of the experiment on the phone.<br>
+	 * 
+	 * For more information see:
+	 * {@link https://github.com/Staacks/phyphox-android/blob/master/app/src/main/java/de/rwth_aachen/phyphox/remoteServer.java} (local class
+	 * controlCommandHandler)
+	 * 
+	 * @param elementId
+	 *        The id of the element that is triggered.
+	 */
+	public void triggerExperimentElement(String elementId) throws PhyphoxConnectionException {
+		String basePath = connection.getUrlAsString();
+		String resourcePath = "/control?cmd=trigger&element=" + elementId;
+		String triggerExperimentElementRequest = getHttpRequestString(basePath, resourcePath);
+		try {
+			String jsonResultString = getDataInJsonRepresentation(triggerExperimentElementRequest);
+			boolean result = getResultFromJsonRepresentation(jsonResultString);
+			if (!result) {
+				//the starting of the experiment seems to be failed for unknown reasons
+				throw new PhyphoxConnectionException(
+						"The element could not be triggered. The phone's remote server sent a negative answer for unknown reasons.");
+			}
+		}
+		catch (ParseException | IOException | JsonSyntaxException e) {
+			throw new PhyphoxConnectionException("Problems occured while trying trigger the element.", e);
 		}
 	}
 	
@@ -147,26 +271,15 @@ public class PhyphoxConnection {
 		return buffers;
 	}
 	
-	/**
-	 * Unused at the moment for Jersey won't seem to work but gives HTTP error 501 (not implemented on server side)
-	 */
-	/*private PhyphoxRawData getDataFromRestServer(Client client, String basePath, String resourcePath) {
-		//from Book: "Der Java Profi: Persistenzlösungen und REST-Services" p. 277
-		WebTarget webTarget = client.target(basePath).path(resourcePath);
-		System.out.println("Sending GET request to URL '" + basePath + resourcePath + "'");
+	private boolean getResultFromJsonRepresentation(String jsonRepresentation) {
+		//first replace all '=' characters with ':' (because the returned data is no correct JSON at the moment)
+		jsonRepresentation = jsonRepresentation.replaceAll("=", ":");
 		
-		Response response = webTarget.request(MediaType.APPLICATION_JSON).get();
-		int responseCode = response.getStatus();
+		//after the JSON notation is repaired, read the result using Google's Gson-API
+		Gson gson = new Gson();
+		JsonObject json = gson.fromJson(jsonRepresentation, JsonObject.class);
+		boolean result = json.get("result").getAsBoolean();
 		
-		System.out.println("Response Code: " + responseCode);
-		
-		if (responseCode != Response.Status.OK.getStatusCode()) {
-			throw new RuntimeException("HTTP error code: " + responseCode);
-		}
-		else if (response.hasEntity()) {
-			String responseText = response.readEntity(String.class);
-			System.out.println(responseText);
-		}
-		return null;
-	}*/
+		return result;
+	}
 }

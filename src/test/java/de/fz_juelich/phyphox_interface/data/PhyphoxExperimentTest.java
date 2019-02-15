@@ -3,7 +3,6 @@ package de.fz_juelich.phyphox_interface.data;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -179,7 +178,7 @@ class PhyphoxExperimentTest {
 		buffers.add(buffer);
 		experiment.addNewDataToBuffers(buffers);
 		
-		verify(listener, times(1)).updateData(Matchers.anyListOf(PhyphoxBuffer.class), any(Boolean.class));
+		verify(listener, times(1)).updateData(Matchers.anyListOf(PhyphoxBuffer.class));
 	}
 	
 	@Test
@@ -193,11 +192,11 @@ class PhyphoxExperimentTest {
 		experiment.addNewDataToBuffers(buffers);
 		
 		//the update method was called
-		verify(listener, times(1)).updateData(Matchers.anyListOf(PhyphoxBuffer.class), any(Boolean.class));
+		verify(listener, times(1)).updateData(Matchers.anyListOf(PhyphoxBuffer.class));
 		
 		experiment.removeDataListener(listener);
 		
 		//the update method is still called only once
-		verify(listener, times(1)).updateData(Matchers.anyListOf(PhyphoxBuffer.class), any(Boolean.class));
+		verify(listener, times(1)).updateData(Matchers.anyListOf(PhyphoxBuffer.class));
 	}
 }

@@ -7,9 +7,9 @@ import java.util.Objects;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import de.fz_juelich.phyphox_interface.connection.PhyphoxConnectionSettings;
-import de.fz_juelich.phyphox_interface.connection.PhyphoxConnectionException;
 import de.fz_juelich.phyphox_interface.connection.PhyphoxConnection;
+import de.fz_juelich.phyphox_interface.connection.PhyphoxConnectionException;
+import de.fz_juelich.phyphox_interface.connection.PhyphoxConnectionSettings;
 import de.fz_juelich.phyphox_interface.connection.PhyphoxDataRequest;
 import de.fz_juelich.phyphox_interface.connection.PhyphoxDataRequestBuilder;
 
@@ -20,7 +20,7 @@ import de.fz_juelich.phyphox_interface.connection.PhyphoxDataRequestBuilder;
  */
 public class PhyphoxExperiment {
 	
-	private PhyphoxConnection collector;//the connection to the phone (parses JSON, ...)
+	private PhyphoxConnection connection;//the connection to the phone (parses JSON, ...)
 	private List<PhyphoxBuffer> data;//all the data from the phone buffers
 	private int updateRate;//the update rate to request new data from the phone (in milliseconds)
 	private int[] lastRead;//the last indices of data that were read from the user
@@ -30,7 +30,9 @@ public class PhyphoxExperiment {
 	/**
 	 * Create a new PhyphoxData object to model the buffered data from the experiment in java.
 	 * 
-	 * @param connection
+	 * The experiment is not started when this object is created. Use the startExperiment() method to start it.
+	 * 
+	 * @param connectionSettings
 	 *        The connection parameters (ip and port of the phone)
 	 * 
 	 * @param bufferNames
@@ -43,8 +45,8 @@ public class PhyphoxExperiment {
 	 * @param updateRate
 	 *        The rate with that the data is updated locally (in milliseconds)
 	 */
-	public PhyphoxExperiment(PhyphoxConnectionSettings connection, List<String> bufferNames, int updateRate) {
-		Objects.requireNonNull(connection, "A null object is no valid connection.");
+	public PhyphoxExperiment(PhyphoxConnectionSettings connectionSettings, List<String> bufferNames, int updateRate) {
+		Objects.requireNonNull(connectionSettings, "A null object is no valid connection setting.");
 		if (bufferNames == null || bufferNames.isEmpty()) {
 			throw new IllegalArgumentException("Buffer names are empty. The names of the buffers are needed to get the data from the experiment.");
 		}
@@ -52,7 +54,7 @@ public class PhyphoxExperiment {
 			throw new IllegalArgumentException("The update rate must be a value greater than zero.");
 		}
 		List<String> bufferNamesClone = new ArrayList<String>(bufferNames);
-		collector = new PhyphoxConnection(connection);
+		connection = new PhyphoxConnection(connectionSettings);
 		data = new ArrayList<PhyphoxBuffer>(bufferNamesClone.size());
 		this.updateRate = updateRate;
 		lastRead = new int[bufferNamesClone.size()];
@@ -64,7 +66,6 @@ public class PhyphoxExperiment {
 		}
 		//create a list for the listeners
 		dataListeners = new ArrayList<PhyphoxDataListener>();
-		startUpdateThread();
 	}
 	/**
 	 * A PhyphoxDataObject that doesn't update any data (just for testing).
@@ -98,7 +99,7 @@ public class PhyphoxExperiment {
 						//create a request to get the new data from the experiment
 						PhyphoxDataRequest request = createRequestForNewData();
 						//send the request and get the new data from the experiment
-						List<PhyphoxBuffer> newData = collector.getData(request);
+						List<PhyphoxBuffer> newData = connection.getData(request);
 						//add the new data to the buffers
 						addNewDataToBuffers(newData);
 						//wait some time before the next update
@@ -121,16 +122,83 @@ public class PhyphoxExperiment {
 	/**
 	 * Restart the data update thread (e.g. after it crashed). When the PhyphoxData object is created the thread is started automatically.
 	 */
-	public void restartConnection() {
-		dataUpdateThread.interrupt();//interrupt the old thread if it's still running
+	public void restartDataConnection() {
+		if (dataUpdateThread != null) {
+			dataUpdateThread.interrupt();//interrupt the old thread if it's still running			
+		}
 		startUpdateThread();//start a new one
 	}
 	
 	/**
 	 * Interrupt the update thread to stop the data updates.
 	 */
-	public void stopConnection() {
-		dataUpdateThread.interrupt();
+	public void stopDataConnection() {
+		if (dataUpdateThread != null) {
+			dataUpdateThread.interrupt();
+		}
+	}
+	
+	/**
+	 * Remote start the experiment on the phone. Also starts the connection to the phone and receives data.
+	 */
+	public void startExperiment() throws PhyphoxConnectionException {
+		connection.startExperiment();
+		restartDataConnection();
+	}
+	/**
+	 * Remote stop the experiment on the phone. Also stops the connection to the phone and stops receiving data (the old data will be still
+	 * available).
+	 */
+	public void stopExperiment() throws PhyphoxConnectionException {
+		try {
+			connection.stopExperiment();
+		}
+		finally {
+			//if the stopping of the experiment doesn't work, at least try to stop the data connection
+			stopDataConnection();
+		}
+	}
+	
+	/**
+	 * Delete all the data of this experiment on the phone.
+	 */
+	public void clearExperimentData() throws PhyphoxConnectionException {
+		try {
+			connection.clearExperimentData();
+		}
+		finally {
+			//clearing the data will also stop the experiment
+			//if the clearing of the experiment's data doesn't work, at least try to stop the data connection
+			stopDataConnection();
+		}
+	}
+	/**
+	 * Send an user given value from an input element to a buffer on the phone.<br>
+	 * 
+	 * For more information see:
+	 * {@link https://github.com/Staacks/phyphox-android/blob/master/app/src/main/java/de/rwth_aachen/phyphox/remoteServer.java} (local class
+	 * controlCommandHandler)
+	 * 
+	 * @param bufferName
+	 *        The name of the buffer that gets the value.
+	 * 
+	 * @param value
+	 *        The value that is to be added to the buffer.
+	 */
+	public void setExperimentBuffer(String bufferName, String value) throws PhyphoxConnectionException {
+		connection.setExperimentBuffer(bufferName, value);
+	}
+	/**
+	 * Trigger an element of the experiment on the phone.<br>
+	 * 
+	 * For more information see:
+	 * {@link https://github.com/Staacks/phyphox-android/blob/master/app/src/main/java/de/rwth_aachen/phyphox/remoteServer.java} (local class
+	 * controlCommandHandler)
+	 * 
+	 * @param elementId
+	 */
+	public void triggerExperimentElement(String elementId) throws PhyphoxConnectionException {
+		connection.triggerExperimentElement(elementId);
 	}
 	
 	@VisibleForTesting
@@ -164,9 +232,8 @@ public class PhyphoxExperiment {
 			//get the new data (sets the last read indices)
 			List<PhyphoxBuffer> newData = getNewData();
 			//full updates are only used when there is no continues buffer
-			boolean fullUpdate = false;//no full updates in this mode
 			for (PhyphoxDataListener listener : dataListeners) {
-				listener.updateData(newData, fullUpdate);
+				listener.updateData(newData);
 			}
 		}
 		//else: if there is no listener don't set the last read indices
@@ -254,19 +321,6 @@ public class PhyphoxExperiment {
 		PhyphoxBuffer clearBuffer = new PhyphoxBuffer(fullBuffer.getName(), new double[0]);
 		data.set(buffer, clearBuffer);
 		lastRead[buffer] = -1;//reset the last read index
-	}
-	
-	/**
-	 * Remote start the experiment on the phone.
-	 */
-	public void startExperiment() {
-		//TODO
-	}
-	/**
-	 * Remote stop the experiment on the phone.
-	 */
-	public void stopExperiment() {
-		//TODO
 	}
 	
 	private int getBufferIndex(String name) {
