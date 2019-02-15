@@ -69,22 +69,22 @@ class PhyphoxDataTest {
 	
 	@Test
 	public void testAddNewDataToBuffers_noContinuesBuffer() {
-		PhyphoxData data = new PhyphoxData(null, "buffer_x");
+		PhyphoxData data = new PhyphoxData("buffer_x");
 		
 		PhyphoxBuffer buffer = new PhyphoxBuffer("buffer_x", new double[] {42, 43, 44, 45});
 		List<PhyphoxBuffer> buffers = new ArrayList<PhyphoxBuffer>(2);
 		buffers.add(buffer);
 		data.addNewDataToBuffers(buffers);
 		
-		//add some more data; the old data is deleted because only full updates are used when there is no continues buffer
+		//add some more data; the old data appended in this version of the full buffer implementation
 		buffer = new PhyphoxBuffer("buffer_x", new double[] {1, 2, 3});
 		buffers.clear();
 		buffers.add(buffer);
 		data.addNewDataToBuffers(buffers);
 		
 		PhyphoxBuffer bufferX = data.getBufferData("buffer_x");
-		assertEquals(3, bufferX.size());
-		assertArrayEquals(new double[] {1, 2, 3}, bufferX.getData(), epsilon);
+		assertEquals(7, bufferX.size());//the data is added and not overwritten
+		assertArrayEquals(new double[] {42, 43, 44, 45, 1, 2, 3}, bufferX.getData(), epsilon);
 	}
 	
 	@Test
@@ -94,12 +94,13 @@ class PhyphoxDataTest {
 		PhyphoxDataRequest request = data.createRequestForNewData();
 		String requestText = request.getAsString();
 		
-		assertEquals("buffer_x=0.0|time&time=0.0", requestText);
+		//only full updates are used in this implementation
+		assertEquals("time=full&buffer_x=full", requestText);
 	}
 	
 	@Test
 	public void testCreateRequest_noContinuesBuffer() {
-		PhyphoxData data = new PhyphoxData(null, "buffer_x", "buffer_y");
+		PhyphoxData data = new PhyphoxData("buffer_x", "buffer_y");
 		
 		PhyphoxDataRequest request = data.createRequestForNewData();
 		String requestText = request.getAsString();

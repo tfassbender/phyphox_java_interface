@@ -60,7 +60,7 @@ public class PhyphoxData {
 			//initialize the last read indices with -1 to read all the data first
 			lastRead[i] = -1;
 			//create buffers
-			data.add(new PhyphoxBuffer(bufferNamesClone.get(i), new double[0]));
+			data.add(new PhyphoxBuffer(bufferNames.get(i), new double[0]));
 		}
 		//create a list for the listeners
 		dataListeners = new ArrayList<PhyphoxDataListener>();
@@ -79,7 +79,7 @@ public class PhyphoxData {
 			//initialize the last read indices with -1 to read all the data first
 			lastRead[i] = -1;
 			//create buffers
-			data.add(new PhyphoxBuffer(bufferNames.get(i), new double[0]));
+			data.add(new PhyphoxBuffer(names[i], new double[0]));
 		}
 		if (continuesBufferNameAdded) {
 			bufferNames.remove(bufferNames.size() - 1);//remove continues buffer that was added before to prevent side effects
