@@ -18,7 +18,7 @@ import de.fz_juelich.phyphox_interface.connection.PhyphoxDataRequestBuilder;
  * Using the PhyphoxData class one can crate a connection to the phone (in remote mode) and get the data from the phone in given time-intervals.<br>
  * The data is than transformed (usually into double values) to be used. Afterwards the user can get all recorded data or the new data.
  */
-public class PhyphoxData {
+public class PhyphoxExperiment {
 	
 	private PhyphoxDataCollector collector;//the connection to the phone (parses JSON, ...)
 	private List<PhyphoxBuffer> data;//all the data from the phone buffers
@@ -43,7 +43,7 @@ public class PhyphoxData {
 	 * @param updateRate
 	 *        The rate with that the data is updated locally (in milliseconds)
 	 */
-	public PhyphoxData(PhyphoxConnection connection, List<String> bufferNames, int updateRate) {
+	public PhyphoxExperiment(PhyphoxConnection connection, List<String> bufferNames, int updateRate) {
 		Objects.requireNonNull(connection, "A null object is no valid connection.");
 		if (bufferNames == null || bufferNames.isEmpty()) {
 			throw new IllegalArgumentException("Buffer names are empty. The names of the buffers are needed to get the data from the experiment.");
@@ -70,7 +70,7 @@ public class PhyphoxData {
 	 * A PhyphoxDataObject that doesn't update any data (just for testing).
 	 */
 	@VisibleForTesting
-	protected PhyphoxData(String... names) {
+	protected PhyphoxExperiment(String... names) {
 		List<String> bufferNames = new ArrayList<String>(Arrays.asList(names));
 		boolean continuesBufferNameAdded = false;
 		data = new ArrayList<PhyphoxBuffer>(bufferNames.size());

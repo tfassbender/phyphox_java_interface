@@ -19,7 +19,7 @@ class PhyphoxDataTest {
 	
 	@Test
 	public void testContinuesBuffer() {
-		PhyphoxData data = new PhyphoxData("time", "buffer_x");
+		PhyphoxExperiment data = new PhyphoxExperiment("time", "buffer_x");
 		
 		assertEquals(2, data.getAllData().size());
 		//assertEquals(1, data.getContinuesBufferIndex());
@@ -27,7 +27,7 @@ class PhyphoxDataTest {
 	
 	@Test
 	public void testGetBuffers() {
-		PhyphoxData data = new PhyphoxData("time", "buffer_x");
+		PhyphoxExperiment data = new PhyphoxExperiment("time", "buffer_x");
 		
 		PhyphoxBuffer buffer1 = new PhyphoxBuffer("time", new double[] {1, 2, 3});
 		List<PhyphoxBuffer> buffers = new ArrayList<PhyphoxBuffer>(2);
@@ -41,14 +41,14 @@ class PhyphoxDataTest {
 	
 	@Test
 	public void testGetBuffers_wrongBufferName() {
-		PhyphoxData data = new PhyphoxData("time", "buffer_x");
+		PhyphoxExperiment data = new PhyphoxExperiment("time", "buffer_x");
 		
 		assertThrows(IllegalStateException.class, () -> data.getBufferData("non_existing_buffer_name"));
 	}
 	
 	@Test
 	public void testAddNewDataToBuffers() {
-		PhyphoxData data = new PhyphoxData("time", "buffer_x", "time");
+		PhyphoxExperiment data = new PhyphoxExperiment("time", "buffer_x", "time");
 		
 		PhyphoxBuffer buffer1 = new PhyphoxBuffer("time", new double[] {1, 2, 3});
 		PhyphoxBuffer buffer2 = new PhyphoxBuffer("buffer_x", new double[] {42, 43, 44, 45});
@@ -69,7 +69,7 @@ class PhyphoxDataTest {
 	
 	@Test
 	public void testAddNewDataToBuffers_noContinuesBuffer() {
-		PhyphoxData data = new PhyphoxData("buffer_x");
+		PhyphoxExperiment data = new PhyphoxExperiment("buffer_x");
 		
 		PhyphoxBuffer buffer = new PhyphoxBuffer("buffer_x", new double[] {42, 43, 44, 45});
 		List<PhyphoxBuffer> buffers = new ArrayList<PhyphoxBuffer>(2);
@@ -89,7 +89,7 @@ class PhyphoxDataTest {
 	
 	@Test
 	public void testCreateRequest() {
-		PhyphoxData data = new PhyphoxData("time", "buffer_x");
+		PhyphoxExperiment data = new PhyphoxExperiment("time", "buffer_x");
 		
 		PhyphoxDataRequest request = data.createRequestForNewData();
 		String requestText = request.getAsString();
@@ -100,7 +100,7 @@ class PhyphoxDataTest {
 	
 	@Test
 	public void testCreateRequest_noContinuesBuffer() {
-		PhyphoxData data = new PhyphoxData("buffer_x", "buffer_y");
+		PhyphoxExperiment data = new PhyphoxExperiment("buffer_x", "buffer_y");
 		
 		PhyphoxDataRequest request = data.createRequestForNewData();
 		String requestText = request.getAsString();
@@ -110,7 +110,7 @@ class PhyphoxDataTest {
 	
 	@Test
 	public void testGetNewData() {
-		PhyphoxData data = new PhyphoxData("time", "buffer_x");
+		PhyphoxExperiment data = new PhyphoxExperiment("time", "buffer_x");
 		
 		PhyphoxBuffer buffer = new PhyphoxBuffer("buffer_x", new double[] {42, 43, 44, 45});
 		List<PhyphoxBuffer> buffers = new ArrayList<PhyphoxBuffer>(2);
@@ -134,7 +134,7 @@ class PhyphoxDataTest {
 	
 	@Test
 	public void testClearBuffers() {
-		PhyphoxData data = new PhyphoxData("time", "buffer_x");
+		PhyphoxExperiment data = new PhyphoxExperiment("time", "buffer_x");
 		
 		PhyphoxBuffer buffer = new PhyphoxBuffer("buffer_x", new double[] {42, 43, 44, 45});
 		List<PhyphoxBuffer> buffers = new ArrayList<PhyphoxBuffer>(2);
@@ -160,6 +160,6 @@ class PhyphoxDataTest {
 		//use the real constructor to build a PhyphoxData object
 		//the object has to be constructed correctly but the update thread will cause a runtime exception
 		List<String> bufferNames = Arrays.asList(new String[] {"buffer_x", "buffer_y"});
-		new PhyphoxData(new PhyphoxConnection("1.1.1.1", 42), bufferNames, 1000);
+		new PhyphoxExperiment(new PhyphoxConnection("1.1.1.1", 42), bufferNames, 1000);
 	}
 }

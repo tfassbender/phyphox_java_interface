@@ -9,7 +9,7 @@ import java.util.ResourceBundle;
 
 import de.fz_juelich.phyphox_interface.connection.PhyphoxConnection;
 import de.fz_juelich.phyphox_interface.data.PhyphoxBuffer;
-import de.fz_juelich.phyphox_interface.data.PhyphoxData;
+import de.fz_juelich.phyphox_interface.data.PhyphoxExperiment;
 import de.fz_juelich.phyphox_interface.data.PhyphoxDataListener;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -41,7 +41,7 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 	@FXML
 	private LineChart<String, Double> chartOutputData;
 	
-	private PhyphoxData experimentData;
+	private PhyphoxExperiment experimentData;
 	
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
@@ -74,7 +74,7 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 			initializeChart();
 			
 			//create the PhyphoxData object that starts reading the buffers automatically
-			experimentData = new PhyphoxData(connection, bufferNames, updateRate);
+			experimentData = new PhyphoxExperiment(connection, bufferNames, updateRate);
 			//register this object as PhyphoxDataListener to be informed about new data
 			experimentData.addDataListener(this);
 			
