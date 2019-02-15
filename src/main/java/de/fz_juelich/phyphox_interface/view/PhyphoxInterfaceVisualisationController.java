@@ -9,7 +9,7 @@ import java.util.ResourceBundle;
 
 import de.fz_juelich.phyphox_interface.connection.PhyphoxConnection;
 import de.fz_juelich.phyphox_interface.data.PhyphoxBuffer;
-import de.fz_juelich.phyphox_interface.data.PhyphoxData;
+import de.fz_juelich.phyphox_interface.data.PhyphoxExperiment;
 import de.fz_juelich.phyphox_interface.data.PhyphoxDataListener;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -41,11 +41,17 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 	@FXML
 	private LineChart<String, Double> chartOutputData;
 	
-	private PhyphoxData experimentData;
+	private PhyphoxExperiment experimentData;
 	
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
+		//set the button actions
 		buttonReadBuffers.setOnAction(e -> startStopExperimentReader());
+		
+		//configure the plot
+		chartOutputData.setCreateSymbols(false);
+		chartOutputData.setAnimated(false);
+		chartOutputData.setTitle("Phyphox Experiment Data");
 	}
 	
 	private void startStopExperimentReader() {
@@ -66,8 +72,6 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 			PhyphoxConnection connection = new PhyphoxConnection(ip, port);
 			//the buffer names (can include the continues buffer but doesn't need to)
 			List<String> bufferNames = Arrays.asList(new String[] {textFieldNameBuffer1.getText(), textFieldTimeBuffer.getText()});
-			//a continues buffer like the time (optional; null if no one exists)
-			String continuesBufferName = textFieldTimeBuffer.getText();
 			//update data from the experiment every second
 			int updateRate = 1000;
 			
@@ -76,7 +80,7 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 			initializeChart();
 			
 			//create the PhyphoxData object that starts reading the buffers automatically
-			experimentData = new PhyphoxData(connection, bufferNames, null, updateRate);//TODO
+			experimentData = new PhyphoxExperiment(connection, bufferNames, updateRate);
 			//register this object as PhyphoxDataListener to be informed about new data
 			experimentData.addDataListener(this);
 			
@@ -108,7 +112,6 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 		//add a new data series where the new data can be appended
 		XYChart.Series<String, Double> series = new XYChart.Series<String, Double>();
 		chartOutputData.getData().add(series);
-		chartOutputData.setAnimated(false);
 	}
 	
 	@Override
@@ -119,7 +122,6 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 		if (fullUpdate) {
 			//would be the case if there would be no continues buffer (like the time buffer)
 			//the data would not be appended at the end but fully updated...
-			
 			List<XYChart.Data<String, Double>> chartDataPoints = getAsChartData(newData);
 			
 			//set the chart data series (needs to be run in an JavaFX thread; therefore the Platform.runLater())
@@ -161,12 +163,33 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 			List<XYChart.Data<String, Double>> chartDataPoints = new ArrayList<XYChart.Data<String, Double>>();
 			//there may be differences in the number of values in every array, so use the lower number of values
 			int numData = Math.min(newData.get(0).size(), newData.get(1).size());
-			for (int i = 0; i < numData; i++) {
-				double time = timeBuffer.getData()[i];
-				double xData = xDataBuffer.getData()[i];
-				//textAreaOutputPlainText.appendText(String.format("\n%.3f              %.5f", time, xData));
-				chartDataPoints.add(new XYChart.Data<String, Double>(String.format("%.4f", time), xData));
+			
+			//use a maximum number of points in the plot (otherwise these FX-Plots will will get really slow). 
+			int maxDataPoints = 1000;
+			int displayedRestClass;
+			if (numData > maxDataPoints) {
+				displayedRestClass = numData / maxDataPoints;
 			}
+			else {
+				displayedRestClass = 1;//display all
+			}
+			
+			//also add the values to the text area
+			StringBuilder sb = new StringBuilder();
+			sb.append("Time      -      Value");
+			
+			for (int i = 0; i < numData; i++) {
+				//only display some of the measured points
+				if (i % displayedRestClass == 0) {
+					
+					double time = timeBuffer.getData()[i];
+					double xData = xDataBuffer.getData()[i];
+					
+					sb.append(String.format("\n%.3f              %.5f", time, xData));
+					chartDataPoints.add(new XYChart.Data<String, Double>(String.format("%.4f", time), xData));
+				}
+			}
+			textAreaOutputPlainText.setText(sb.toString());
 			
 			return chartDataPoints;
 		}
@@ -176,7 +199,7 @@ public class PhyphoxInterfaceVisualisationController implements Initializable, P
 		}
 	}
 	
-	private void printData(List<PhyphoxBuffer> newData) {
+	protected void printData(List<PhyphoxBuffer> newData) {
 		for (PhyphoxBuffer buffer : newData) {
 			System.out.println("\n" + buffer.getName());
 			double[] data = buffer.getData();
