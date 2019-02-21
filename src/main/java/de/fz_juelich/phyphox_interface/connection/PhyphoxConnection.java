@@ -80,7 +80,7 @@ public class PhyphoxConnection {
 						"The experiment couldn't be started. The phone's remote server sent a negative answer for unknown reasons.");
 			}
 		}
-		catch (ParseException | IOException | JsonSyntaxException e) {
+		catch (ParseException | IOException | JsonSyntaxException | IllegalArgumentException e) {
 			throw new PhyphoxConnectionException("Problems occured while trying to start the experiment.", e);
 		}
 	}

@@ -63,6 +63,7 @@ public class DialogUtils {
 		TextArea textArea = new TextArea(sw.toString());
 		textArea.setEditable(false);
 		textArea.setWrapText(true);
+		textArea.setPrefSize(1000, 400);
 		
 		FlowPane contentPane = new FlowPane();
 		contentPane.getChildren().addAll(details, textArea);
