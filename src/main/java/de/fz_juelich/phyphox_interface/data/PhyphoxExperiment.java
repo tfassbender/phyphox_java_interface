@@ -139,23 +139,90 @@ public class PhyphoxExperiment {
 	}
 	
 	/**
-	 * Remote start the experiment on the phone. Also starts the connection to the phone and receives data.
+	 * Remote start the experiment on the phone. Also starts the connection to the phone and receives data.<br>
 	 */
 	public void startExperiment() throws PhyphoxConnectionException {
-		connection.startExperiment();
-		restartDataConnection();
+		startExperiment(false);
 	}
+	/**
+	 * Remote start the experiment on the phone. Also starts the connection to the phone and receives data.<br>
+	 * 
+	 * @param wait
+	 *        The wait parameter indicates whether the execution waits for the start of the experiment to respond.<br>
+	 *        Set wait to false to just go on with the execution.
+	 */
+	public void startExperiment(boolean wait) throws PhyphoxConnectionException {
+		if (wait) {
+			//just execute without thread to throw the exception when something fails
+			connection.startExperiment();
+			restartDataConnection();
+		}
+		else {
+			//execute in a separate thread to not wait for the server response
+			Thread starterThread = new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					try {
+						connection.startExperiment();
+					}
+					catch (PhyphoxConnectionException e) {
+						throw new RuntimeException(e);
+					}
+					restartDataConnection();
+				}
+			}, "experiment_starter_thread");
+			starterThread.setDaemon(true);
+			starterThread.start();
+		}
+	}
+	
 	/**
 	 * Remote stop the experiment on the phone. Also stops the connection to the phone and stops receiving data (the old data will be still
 	 * available).
 	 */
 	public void stopExperiment() throws PhyphoxConnectionException {
-		try {
-			connection.stopExperiment();
+		stopExperiment(false);
+	}
+	/**
+	 * Remote stop the experiment on the phone. Also stops the connection to the phone and stops receiving data (the old data will be still
+	 * available).
+	 * 
+	 * @param wait
+	 *        The wait parameter indicates whether the execution waits for the stopping of the experiment to respond.<br>
+	 *        Set wait to false to just go on with the execution.
+	 */
+	public void stopExperiment(boolean wait) throws PhyphoxConnectionException {
+		if (wait) {
+			//just execute without thread to throw the exception when something fails
+			try {
+				connection.stopExperiment();
+			}
+			finally {
+				//if the stopping of the experiment doesn't work, at least try to stop the data connection
+				stopDataConnection();
+			}
 		}
-		finally {
-			//if the stopping of the experiment doesn't work, at least try to stop the data connection
-			stopDataConnection();
+		else {
+			//execute in a separate thread to not wait for the server response
+			Thread stopperThread = new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					try {
+						connection.stopExperiment();
+					}
+					catch (PhyphoxConnectionException e) {
+						throw new RuntimeException(e);
+					}
+					finally {
+						//if the stopping of the experiment doesn't work, at least try to stop the data connection
+						stopDataConnection();
+					}
+				}
+			}, "experiment_stopper_thread");
+			stopperThread.setDaemon(true);
+			stopperThread.start();
 		}
 	}
 	
@@ -163,13 +230,47 @@ public class PhyphoxExperiment {
 	 * Delete all the data of this experiment on the phone.
 	 */
 	public void clearExperimentData() throws PhyphoxConnectionException {
-		try {
-			connection.clearExperimentData();
+		clearExperimentData(false);
+	}
+	/**
+	 * Delete all the data of this experiment on the phone.
+	 * 
+	 * @param wait
+	 *        The wait parameter indicates whether the execution waits for the clearing of the experiment data to respond.<br>
+	 *        Set wait to false to just go on with the execution.
+	 */
+	public void clearExperimentData(boolean wait) throws PhyphoxConnectionException {
+		if (wait) {
+			try {
+				connection.clearExperimentData();
+			}
+			finally {
+				//clearing the data will also stop the experiment
+				//if the clearing of the experiment's data doesn't work, at least try to stop the data connection
+				stopDataConnection();
+			}
 		}
-		finally {
-			//clearing the data will also stop the experiment
-			//if the clearing of the experiment's data doesn't work, at least try to stop the data connection
-			stopDataConnection();
+		else {
+			//execute in a separate thread to not wait for the server response
+			Thread clearThread = new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					try {
+						connection.clearExperimentData();
+					}
+					catch (PhyphoxConnectionException e) {
+						throw new RuntimeException(e);
+					}
+					finally {
+						//clearing the data will also stop the experiment
+						//if the clearing of the experiment's data doesn't work, at least try to stop the data connection
+						stopDataConnection();
+					}
+				}
+			}, "experiment_clear_data_thread");
+			clearThread.setDaemon(true);
+			clearThread.start();
 		}
 	}
 	/**
